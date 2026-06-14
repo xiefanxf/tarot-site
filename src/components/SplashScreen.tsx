@@ -24,7 +24,7 @@ export default function SplashScreen({ onComplete, isDark }: SplashScreenProps) 
     };
   }, [onComplete]);
 
-  const splashImage = isDark ? '/splash_night.jpg' : '/splash_day.jpg';
+  const splashImage = isDark ? import.meta.env.BASE_URL + 'splash_night.jpg' : import.meta.env.BASE_URL + 'splash_day.jpg';
 
   return (
     <motion.div
