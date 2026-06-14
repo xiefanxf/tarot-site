@@ -460,7 +460,7 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
       </div>
 
       {/* Bottom buttons - FIXED at screen bottom */}
-      <div className="fixed bottom-4 left-0 right-0 z-30 flex justify-center gap-4 px-4 md:hidden" onClick={stopPropagation}>
+      <div className="fixed bottom-4 left-0 right-0 z-30 flex justify-center gap-4 px-4" onClick={stopPropagation}>
         <button
           onClick={onReset}
           className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-display transition-all active:scale-95"
