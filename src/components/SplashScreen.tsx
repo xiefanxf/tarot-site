@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 
 interface SplashScreenProps {
@@ -9,14 +9,25 @@ interface SplashScreenProps {
 export default function SplashScreen({ onComplete, isDark }: SplashScreenProps) {
   const [phase, setPhase] = useState<'show' | 'fade'>('show');
 
-  useEffect(() => {
+  const preloaded = useRef(false);
+ 
+ useEffect(() => {
+    // Preload images immediately
+    if (!preloaded.current) {
+      preloaded.current = true;
+      const preloadDay = new Image();
+      preloadDay.src = import.meta.env.BASE_URL + 'splash_day.jpg';
+      const preloadNight = new Image();
+      preloadNight.src = import.meta.env.BASE_URL + 'splash_night.jpg';
+    }
+ 
     const showTimer = setTimeout(() => {
       setPhase('fade');
-    }, 2500);
-
+    }, 800);
+ 
     const completeTimer = setTimeout(() => {
       onComplete();
-    }, 3800);
+    }, 1400);
 
     return () => {
       clearTimeout(showTimer);
@@ -32,7 +43,7 @@ export default function SplashScreen({ onComplete, isDark }: SplashScreenProps) 
       style={{ background: isDark ? '#0A1628' : '#F5F0E8' }}
       initial={{ opacity: 1 }}
       animate={{ opacity: phase === 'fade' ? 0 : 1 }}
-      transition={{ duration: 1.3, ease: 'easeInOut' }}
+      transition={{ duration: 0.6, ease: 'easeInOut' }}
     >
       {/* Full screen splash image */}
       <motion.img
@@ -43,6 +54,7 @@ export default function SplashScreen({ onComplete, isDark }: SplashScreenProps) 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
+        loading="eager"
       />
 
       {/* Text overlay with Cinzel font */}
