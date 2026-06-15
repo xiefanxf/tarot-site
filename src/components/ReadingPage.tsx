@@ -296,7 +296,7 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
 
   return (
     <div
-      className="flex-1 flex flex-col items-center w-full max-w-6xl mx-auto px-4 pt-4 pb-20 overflow-y-auto relative"
+      className="flex-1 flex flex-col items-center w-full max-w-6xl mx-auto px-4 pt-4 pb-48 overflow-y-auto relative"
       onClick={handleBackgroundClick}
     >
       {/* Back button */}
@@ -387,7 +387,7 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
       {/* Card detail - fixed bottom panel above buttons */}
       {selectedCard && selectedPosition && (
         <motion.div
-          className="fixed bottom-[72px] left-0 right-0 z-40 px-3 md:hidden"
+          className="fixed bottom-[72px] left-0 right-0 z-40 px-3"
           initial={{ y: 120, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 120, opacity: 0 }}
