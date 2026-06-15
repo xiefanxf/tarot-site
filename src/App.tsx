@@ -176,29 +176,6 @@ function App() {
         />
       )}
 
-      {/* Ambient corner decorations */}
-      <div className="fixed top-0 left-0 w-32 h-32 pointer-events-none z-[5] opacity-30">
-        <svg viewBox="0 0 100 100" fill="none">
-          <path d="M0 0 L30 0 L0 30 Z" fill="url(#cornerGrad)" />
-          <defs>
-            <linearGradient id="cornerGrad" x1="0" y1="0" x2="30" y2="30">
-              <stop offset="0%" stopColor="#C8A97E" stopOpacity="0.3" />
-              <stop offset="100%" stopColor="transparent" />
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
-      <div className="fixed bottom-0 right-0 w-32 h-32 pointer-events-none z-[5] opacity-30">
-        <svg viewBox="0 0 100 100" fill="none">
-          <path d="M100 100 L70 100 L100 70 Z" fill="url(#cornerGrad2)" />
-          <defs>
-            <linearGradient id="cornerGrad2" x1="100" y1="100" x2="70" y2="70">
-              <stop offset="0%" stopColor="#C8A97E" stopOpacity="0.3" />
-              <stop offset="100%" stopColor="transparent" />
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
     </div>
   );
 }
