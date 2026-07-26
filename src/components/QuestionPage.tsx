@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { Heart, Briefcase, Coins, HeartPulse, Sparkles, ArrowRight } from 'lucide-react';
 import Copyright from './Copyright';
-import { questionCategories } from '@/data/tarotCards';
+import { useI18n } from '@/i18n';
+import { getLocalizedCategories } from '@/i18n/tarot';
 
 interface QuestionPageProps {
+  initialCategory?: string;
+  initialQuestion?: string;
   onConfirm: (category: string, question: string) => void;
   onBack: () => void;
 }
@@ -16,9 +19,13 @@ const iconMap: Record<string, React.ReactNode> = {
   sparkles: <Sparkles className="w-5 h-5" />,
 };
 
-export default function QuestionPage({ onConfirm, onBack }: QuestionPageProps) {
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [question, setQuestion] = useState('');
+export default function QuestionPage({ initialCategory = '', initialQuestion = '', onConfirm, onBack }: QuestionPageProps) {
+  const { language, t } = useI18n();
+  const questionCategories = getLocalizedCategories(language, {
+    love: t('categoryLove'), career: t('categoryCareer'), wealth: t('categoryWealth'), health: t('categoryHealth'), general: t('categoryGeneral'),
+  });
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
+  const [question, setQuestion] = useState(initialQuestion);
 
   const handleConfirm = () => {
     if (selectedCategory) {
@@ -64,7 +71,7 @@ export default function QuestionPage({ onConfirm, onBack }: QuestionPageProps) {
             className="flex items-center gap-1 text-[#8BA6C4] hover:text-[#C8A97E] transition-colors text-sm"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-            <span className="font-body">返回</span>
+            <span className="font-body">{t('back')}</span>
           </button>
         </div>
 
@@ -76,11 +83,11 @@ export default function QuestionPage({ onConfirm, onBack }: QuestionPageProps) {
         </div>
 
         {/* Title */}
-        <h2 className="font-decorative text-3xl md:text-4xl text-[#F0F0F0] mb-2" style={{ letterSpacing: '0.12em' }}>
-          占卜指引
-        </h2>
+        <h1 tabIndex={-1} className="page-heading font-decorative text-3xl md:text-4xl text-[#F0F0F0] mb-2" style={{ letterSpacing: '0.12em' }}>
+          {t('divinationGuide')}
+        </h1>
         <p className="font-display text-sm text-[#C8A97E] mb-2" style={{ letterSpacing: '0.15em' }}>
-          DIVINATION GUIDE
+          {t('guideEyebrow')}
         </p>
 
         {/* Divider */}
@@ -91,24 +98,27 @@ export default function QuestionPage({ onConfirm, onBack }: QuestionPageProps) {
         </div>
 
         <p className="text-[#98ACC8] font-body text-sm mb-6 text-center">
-          塔罗无法替你做出决定，但它能照见你内心真实的答案
+          {t('guideCopy')}
         </p>
 
         {/* Section label */}
         <div className="w-full max-w-md mb-3">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-[#C8A97E]/40" />
-            <span className="text-xs text-[#8BA6C4] font-display tracking-wider">选择占卜领域</span>
+            <span className="text-xs text-[#8BA6C4] font-display tracking-wider">{t('chooseCategory')}</span>
           </div>
         </div>
 
         {/* Category selection - 3+2 grid */}
-        <div className="w-full max-w-md flex flex-col gap-3 mb-6">
+        <div className="w-full max-w-md flex flex-col gap-3 mb-6" role="radiogroup" aria-label={t('chooseCategory')}>
           {/* Row 1: 3 items */}
           <div className="grid grid-cols-3 gap-3">
             {questionCategories.slice(0, 3).map((cat) => (
               <button
                 key={cat.id}
+                type="button"
+                role="radio"
+                aria-checked={selectedCategory === cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
                 className={`
                   relative flex flex-col items-center gap-2 py-4 px-2 rounded-xl border-2 transition-all duration-300
@@ -135,6 +145,9 @@ export default function QuestionPage({ onConfirm, onBack }: QuestionPageProps) {
             {questionCategories.slice(3).map((cat) => (
               <button
                 key={cat.id}
+                type="button"
+                role="radio"
+                aria-checked={selectedCategory === cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
                 className={`
                   relative flex flex-col items-center gap-2 py-4 px-2 rounded-xl border-2 transition-all duration-300 flex-1 max-w-[33%]
@@ -169,7 +182,7 @@ export default function QuestionPage({ onConfirm, onBack }: QuestionPageProps) {
         <div className="w-full max-w-md mb-3">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-[#C8A97E]/40" />
-            <span className="text-xs text-[#8BA6C4] font-display tracking-wider">默念你的问题（可选）</span>
+            <span className="text-xs text-[#8BA6C4] font-display tracking-wider">{t('optionalQuestion')}</span>
           </div>
         </div>
 
@@ -178,7 +191,7 @@ export default function QuestionPage({ onConfirm, onBack }: QuestionPageProps) {
           <textarea
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            placeholder="例如：我该如何改善当前的人际关系？"
+            placeholder={t('questionPlaceholder')}
             className="w-full h-24 px-4 py-3 rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--text-primary)] font-body text-sm placeholder-[var(--text-dim)] focus:outline-none focus:border-[#C8A97E]/50 focus:shadow-[0_0_15px_rgba(200,169,126,0.1)] transition-all resize-none"
           />
         </div>
@@ -197,14 +210,14 @@ export default function QuestionPage({ onConfirm, onBack }: QuestionPageProps) {
           className="btn-mystical flex items-center gap-2 disabled:opacity-40"
         >
           <span className="relative z-10 flex items-center gap-2">
-            开始洗牌
+            {t('startShuffle')}
             <ArrowRight className="w-4 h-4" />
           </span>
         </button>
 
         {/* Bottom quote */}
         <p className="mt-6 text-[10px] text-[#4A5A72] font-body italic text-center max-w-xs leading-relaxed">
-          "牌面如镜像，映照的是你的心"
+          {t('mirrorQuote')}
         </p>
 
         {/* Copyright */}

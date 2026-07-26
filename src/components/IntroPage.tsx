@@ -1,20 +1,26 @@
 import { useCallback } from 'react';
-import { Sparkles } from 'lucide-react';
+import { BookOpenCheck, CalendarCheck, History, Sparkles } from 'lucide-react';
 import Copyright from './Copyright';
 import CardBackImg from './CardBackImg';
+import { useI18n } from '@/i18n';
 
 interface IntroPageProps {
   onStart: () => void;
+  onOpenHistory: () => void;
+  onOpenDaily: () => void;
+  onOpenLibrary: () => void;
+  onOpenPrivacy: () => void;
 }
 
-export default function IntroPage({ onStart }: IntroPageProps) {
+export default function IntroPage({ onStart, onOpenHistory, onOpenDaily, onOpenLibrary, onOpenPrivacy }: IntroPageProps) {
+  const { t } = useI18n();
   const handleStart = useCallback(() => {
     onStart();
   }, [onStart]);
 
   return (
     <div
-      className="relative z-10 w-full h-full overflow-hidden select-none"
+      className="intro-page relative z-10 w-full h-full overflow-y-auto overflow-x-hidden select-none"
     >
       {/* Star mandala - large and prominent */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -65,7 +71,7 @@ export default function IntroPage({ onStart }: IntroPageProps) {
       <div className="absolute bottom-6 right-6 w-12 h-12 border-r border-b border-[#C8A97E]/20 pointer-events-none" />
 
       {/* Content */}
-      <div className="relative z-10 w-full h-full flex flex-col items-center justify-between text-center px-6 py-8">
+      <div className="intro-page-content relative z-10 w-full min-h-full flex flex-col items-center justify-between gap-6 text-center px-6 py-8">
 
         {/* Top decorative line */}
         <div className="flex items-center gap-4 pt-4">
@@ -75,7 +81,7 @@ export default function IntroPage({ onStart }: IntroPageProps) {
         </div>
 
         {/* Center content group */}
-        <div className="flex flex-col items-center">
+        <div className="intro-center flex flex-col items-center">
           {/* Tarot cards display */}
           <div className="mb-6 relative w-28 h-40">
             {[0, 1, 2].map((i) => (
@@ -105,10 +111,11 @@ export default function IntroPage({ onStart }: IntroPageProps) {
 
           {/* Main title */}
           <h1
-            className="font-decorative text-4xl md:text-6xl text-[#F0F0F0] mb-2 text-glow"
+            tabIndex={-1}
+            className="page-heading font-decorative text-4xl md:text-6xl text-[#F0F0F0] mb-2 text-glow"
             style={{ letterSpacing: '0.2em' }}
           >
-            日月塔罗
+            {t('appName')}
           </h1>
 
           {/* Divider */}
@@ -119,12 +126,12 @@ export default function IntroPage({ onStart }: IntroPageProps) {
           </div>
 
           <p className="text-base md:text-lg text-[#98ACC8] font-body mb-3 leading-relaxed max-w-md">
-            探寻潜意识的回响
+            {t('introTagline')}
           </p>
           <p className="text-sm text-[#6A7A96] font-body mb-8 leading-relaxed max-w-sm">
-            集中精神，默念你的问题
+            {t('introLine1')}
             <br />
-            让78张塔罗牌为你揭示答案
+            {t('introLine2')}
           </p>
 
           {/* CTA Button */}
@@ -134,7 +141,7 @@ export default function IntroPage({ onStart }: IntroPageProps) {
           >
             <span className="flex items-center gap-3">
               <Sparkles className="w-4 h-4" />
-              开始占卜
+              {t('start')}
             </span>
           </button>
 
@@ -142,7 +149,7 @@ export default function IntroPage({ onStart }: IntroPageProps) {
           <div className="flex items-center gap-2 mt-6">
             <div className="w-6 h-px bg-gradient-to-r from-transparent to-[#C8A97E]/20" />
             <p className="text-[11px] text-[#4A5A72] font-body tracking-wider">
-              78张塔罗牌 · 经典牌阵 · 深度解读
+              {t('introFeatures')}
             </p>
             <div className="w-6 h-px bg-gradient-to-l from-transparent to-[#C8A97E]/20" />
           </div>
@@ -150,8 +157,14 @@ export default function IntroPage({ onStart }: IntroPageProps) {
 
         {/* Bottom area */}
         <div className="flex flex-col items-center gap-2 pb-2">
+          <nav className="intro-feature-dock" aria-label={t('appName')}>
+            <button onClick={onOpenHistory}><History className="w-4 h-4" /><span>{t('navHistory')}</span></button>
+            <button onClick={onOpenDaily}><CalendarCheck className="w-4 h-4" /><span>{t('navDaily')}</span></button>
+            <button onClick={onOpenLibrary}><BookOpenCheck className="w-4 h-4" /><span>{t('navLibrary')}</span></button>
+          </nav>
           <div className="w-20 h-px bg-gradient-to-r from-transparent via-[#C8A97E]/20 to-transparent" />
           <Copyright />
+          <button className="intro-privacy-link" onClick={onOpenPrivacy}>{t('navPrivacy')}</button>
         </div>
       </div>
     </div>

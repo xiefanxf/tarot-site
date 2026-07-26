@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { TarotCard as TarotCardType } from '@/types/tarot';
+import { useI18n } from '@/i18n';
 
 interface TarotCardProps {
   card: TarotCardType;
@@ -11,6 +12,7 @@ interface TarotCardProps {
   className?: string;
   style?: React.CSSProperties;
   disabled?: boolean;
+  positionLabel?: string;
 }
 
 const sizeMap = {
@@ -31,15 +33,13 @@ function CardInner({
   const [imgError, setImgError] = useState(false);
   const hasImage = card.image && !imgError;
 
-  const frontTransform = isReversed
-    ? 'scale(1.08) rotate(180deg)'
-    : 'scale(1.08)';
+  const frontTransform = isReversed ? 'rotate(180deg)' : undefined;
 
   return (
     <div className={`tarot-card w-full h-full ${showFront ? 'flipped' : ''}`}>
       <div className="tarot-card-inner">
         {/* Back face */}
-        <div className="tarot-card-face tarot-card-back">
+        <div className="tarot-card-face tarot-card-back" aria-hidden={showFront}>
           <img
             className="card-back-dark"
             src={`${import.meta.env.BASE_URL}card_back.jpg`}
@@ -56,15 +56,15 @@ function CardInner({
           />
         </div>
         {/* Front face */}
-        <div className="tarot-card-face tarot-card-front">
+        <div className="tarot-card-face tarot-card-front" aria-hidden={!showFront}>
           {hasImage ? (
             <img
               src={card.image}
-              alt={card.name}
+              alt={showFront ? card.name : ''}
               draggable={false}
               loading="eager"
               onError={() => setImgError(true)}
-              style={{ transform: frontTransform }}
+              style={frontTransform ? { transform: frontTransform } : undefined}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#1a1520] to-[#0A1628]">
@@ -92,9 +92,20 @@ export default function TarotCard({
   className = '',
   style,
   disabled = false,
+  positionLabel,
 }: TarotCardProps) {
+  const { language, t } = useI18n();
   const s = sizeMap[size];
   const showFront = isFlipped || isRevealed;
+  const hiddenCardLabel = language === 'zh'
+    ? '未翻开的塔罗牌'
+    : language === 'ja'
+      ? '未公開のタロットカード'
+      : 'Hidden tarot card';
+  const cardLabel = showFront
+    ? `${card.name}${isReversed ? `, ${t('reversed')}` : ''}`
+    : hiddenCardLabel;
+  const accessibleLabel = positionLabel ? `${positionLabel}: ${cardLabel}` : cardLabel;
 
   const handleClick = useCallback(() => {
     if (disabled) return;
@@ -102,12 +113,16 @@ export default function TarotCard({
   }, [onClick, disabled]);
 
   return (
-    <div
-      className={className}
+    <button
+      type="button"
+      className={`tarot-card-control ${className}`}
       style={{ width: s.w, height: s.h, ...style }}
       onClick={handleClick}
+      disabled={disabled}
+      aria-label={accessibleLabel}
+      aria-pressed={showFront}
     >
       <CardInner card={card} isReversed={isReversed} showFront={showFront} />
-    </div>
+    </button>
   );
 }

@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Sparkles, ArrowDown, RotateCcw, ChevronLeft } from 'lucide-react';
 import Copyright from './Copyright';
 import type { DrawnCard, SpreadType } from '@/types/tarot';
 import TarotCard from './TarotCard';
+import { useI18n } from '@/i18n';
+import { successHaptic, tapHaptic } from '@/services/native';
 
 const cardBackUrl = `${import.meta.env.BASE_URL}card_back.jpg`;
 
@@ -16,12 +18,20 @@ interface ReadingPageProps {
 }
 
 export default function ReadingPage({ spread, drawnCards: initialCards, onComplete, onReset, onBack }: ReadingPageProps) {
+  const { t } = useI18n();
+  const reduceMotion = useReducedMotion();
   const [cards, setCards] = useState<DrawnCard[]>(initialCards);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [isDealing, setIsDealing] = useState(true);
   const [dealPhase, setDealPhase] = useState(0);
   const [revealedCount, setRevealedCount] = useState(0);
-  const [isSpread, setIsSpread] = useState(false);
+  const detailRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const byId = new Map(initialCards.map(item => [item.card.id, item.card]));
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCards(current => current.map(item => ({ ...item, card: byId.get(item.card.id) ?? item.card })));
+  }, [initialCards]);
 
   // Re-render on theme change to update label colors
   const [, setThemeTick] = useState(0);
@@ -37,6 +47,29 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
   const selectedCard = selectedIndex !== null ? cards[selectedIndex] : null;
   const selectedPosition = selectedIndex !== null ? spread.positions[selectedIndex] : null;
 
+  // The detail card is part of the mobile scroll flow. Bring it fully above the
+  // fixed action buttons after a card is selected; desktop keeps the overlay.
+  useEffect(() => {
+    if (selectedIndex === null || window.matchMedia('(min-width: 768px)').matches) return;
+
+    const timer = window.setTimeout(() => {
+      const detail = detailRef.current;
+      if (!detail) return;
+      detail.scrollIntoView({ behavior: 'auto', block: 'end' });
+
+      const scroller = detail.closest<HTMLElement>('.reading-page');
+      const selected = scroller?.querySelector<HTMLElement>(`[data-reading-card-index="${selectedIndex}"]`);
+      if (!scroller || !selected) return;
+      const minimumTop = 116;
+      const selectedTop = selected.getBoundingClientRect().top;
+      if (selectedTop < minimumTop) {
+        scroller.scrollBy({ top: selectedTop - minimumTop, behavior: reduceMotion ? 'auto' : 'smooth' });
+      }
+    }, 120);
+
+    return () => window.clearTimeout(timer);
+  }, [reduceMotion, selectedIndex]);
+
   // Dealing animation - snappy rhythm
   useEffect(() => {
     if (!isDealing) return;
@@ -49,19 +82,9 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
         }
         return prev + 1;
       });
-    }, 220);
+    }, reduceMotion ? 1 : 220);
     return () => clearInterval(interval);
-  }, [isDealing, totalCards]);
-
-  // Auto spread after dealing
-  useEffect(() => {
-    if (isDealing) return;
-    if (spread.id !== 'celtic_cross') return;
-    if (isSpread) return;
-    const timer = setTimeout(() => setIsSpread(true), 800);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDealing]);
+  }, [isDealing, reduceMotion, totalCards]);
 
   const handleCardClick = useCallback((index: number) => {
     if (isDealing) return;
@@ -71,6 +94,7 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
       return;
     }
     const newCards = cards.map((c, i) => i === index ? { ...c, isRevealed: true } : c);
+    void tapHaptic('medium');
     setCards(newCards);
     setRevealedCount(prev => prev + 1);
     setSelectedIndex(index);
@@ -109,7 +133,7 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
                     scale: isDealt ? 1 : 0.2,
                     rotateZ: isDealt ? 0 : dRot[index],
                   }}
-                  transition={{
+                  transition={reduceMotion ? { duration: 0 } : {
                     type: 'spring',
                     stiffness: 120,
                     damping: 14,
@@ -127,6 +151,8 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
                       isReversed={drawnCard.isReversed}
                       isRevealed={drawnCard.isRevealed}
                       size="sm"
+                      positionLabel={pos.label}
+                      disabled={isDealing}
                     />
                   </div>
                   <motion.div
@@ -134,7 +160,7 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
                     style={{ color: '#C8A97E' }}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: isDealt ? 1 : 0 }}
-                    transition={{ delay: isDealt ? 0.4 + index * 0.1 : 0 }}
+                    transition={reduceMotion ? { duration: 0 } : { delay: isDealt ? 0.4 + index * 0.1 : 0 }}
                   >
                     {pos.label}
                   </motion.div>
@@ -159,14 +185,16 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
                 className="flex flex-col items-center"
                 initial={{ opacity: 0, y: 60, scale: 0.5 }}
                 animate={{ opacity: isDealt ? 1 : 0, y: isDealt ? 0 : 60, scale: isDealt ? 1 : 0.5 }}
-                transition={{ type: 'spring', stiffness: 150, damping: 15, delay: index * 0.12 }}
+                transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 150, damping: 15, delay: index * 0.12 }}
               >
                 <div className="cursor-pointer rounded-lg overflow-hidden" style={{ width: 120, height: 180 }}>
-                  <TarotCard
+                    <TarotCard
                     card={drawnCard.card}
                     isReversed={drawnCard.isReversed}
                     isRevealed={drawnCard.isRevealed}
                     size="md"
+                    positionLabel={pos.label}
+                    disabled={isDealing}
                     onClick={() => handleCardClick(index)}
                   />
                 </div>
@@ -201,19 +229,19 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
   const M_CENTER_Y = CC_H / 2 - CH / 2;
   const renderMobileCelticCross = () => {
     // Celtic Cross 10-card positions in 4-col grid
-    // 0=现状 1=挑战 2=过去 3=目标 4=根基 5=未来 6=自我 7=环境 8=希望 9=结果
+    // 0=现状 1=挑战 2=根基 3=过去 4=目标 5=未来 6=自我 7=环境 8=希望 9=结果
     // Layout:
-    //   [3-目标]              [6-自我]
-    // [2-过去][0-现状][1-挑战][5-未来]
-    //   [4-根基]              [7-环境]
+    //   [4-目标]              [6-自我]
+    // [3-过去][0-现状][1-挑战][5-未来]
+    //   [2-根基]              [7-环境]
     //                         [8-希望]
     //                         [9-结果]
-    const cardX = [COL[1], COL[2], COL[0], COL[1], COL[1], COL[3], COL[3], COL[3], COL[3], COL[3]];
-    const cardY = [ROW[1], ROW[1], ROW[1], ROW[0], ROW[2], ROW[1], ROW[0], ROW[2], ROW[3], ROW[4]];
+    const cardX = [COL[1], COL[2], COL[1], COL[0], COL[1], COL[3], COL[3], COL[3], COL[3], COL[3]];
+    const cardY = [ROW[1], ROW[1], ROW[2], ROW[1], ROW[0], ROW[1], ROW[0], ROW[2], ROW[3], ROW[4]];
     const mRot = [15, -20, 10, -12, 18, -8, 22, -16, 11, -25];
 
     return (
-      <div className="flex md:hidden justify-center w-full" style={{ overflow: 'visible' }}>
+      <div className="flex md:hidden flex-none justify-center w-full" style={{ overflow: 'visible' }}>
         <div className="relative" style={{ width: CC_W, height: CC_H }}>
           {cards.map((drawnCard, index) => {
             const pos = spread.positions[index];
@@ -227,6 +255,7 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
             return (
               <motion.div
                 key={`cc-${index}`}
+                data-reading-card-index={index}
                 className="absolute flex flex-col items-center"
                 style={{
                   zIndex: isSelected ? 50 : (pos.isCross ? 35 : index),
@@ -240,7 +269,7 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
                   scale: isDealt ? 1 : 0.2,
                   rotateZ: isDealt ? 0 : mRot[index],
                 }}
-                transition={{
+                transition={reduceMotion ? { duration: 0 } : {
                   type: 'spring',
                   stiffness: 130,
                   damping: 14,
@@ -258,7 +287,8 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
                     isReversed={drawnCard.isReversed}
                     isRevealed={drawnCard.isRevealed}
                     size="sm"
-                    disabled={isDealing || (allRevealed && !drawnCard.isReversed)}
+                    positionLabel={pos.label}
+                    disabled={isDealing}
                     style={{
                       transform: 'scale(0.636)',
                       transformOrigin: 'top left',
@@ -270,7 +300,7 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
                   style={{ color: 'var(--text-primary)', height: LABEL_H, lineHeight: `${LABEL_H}px` }}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: isDealt ? 1 : 0 }}
-                  transition={{ delay: isDealt ? 0.3 + index * 0.08 : 0 }}
+                  transition={reduceMotion ? { duration: 0 } : { delay: isDealt ? 0.3 + index * 0.08 : 0 }}
                 >
                   {pos.label}
                 </motion.div>
@@ -296,7 +326,7 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
 
   return (
     <div
-      className="flex-1 flex flex-col items-center w-full max-w-6xl mx-auto px-4 pt-4 pb-48 overflow-y-auto relative"
+      className="reading-page flex-1 flex flex-col items-center w-full max-w-6xl mx-auto px-4 pt-32 md:pt-4 pb-48 overflow-y-auto scroll-pb-28 relative"
       onClick={handleBackgroundClick}
     >
       {/* Back button */}
@@ -305,16 +335,20 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
         className="self-start flex items-center gap-1 text-sm text-[#98ACC8] hover:text-[#C8A97E] transition-colors mb-2"
       >
         <ChevronLeft className="w-4 h-4" />
-        <span>返回牌阵</span>
+        <span>{t('backToSpreads')}</span>
       </button>
 
       {/* Header */}
       <div className="text-center mb-4" onClick={stopPropagation}>
-        <h2 className="font-display text-xl md:text-2xl" style={{ color: 'var(--text-primary)', letterSpacing: '0.1em' }}>
+        <h1 tabIndex={-1} className="page-heading font-display text-xl md:text-2xl" style={{ color: 'var(--text-primary)', letterSpacing: '0.1em' }}>
           {spread.name}
-        </h2>
-        <p className="text-xs font-body mt-1" style={{ color: 'var(--text-secondary)' }}>
-          {isDealing ? `正在发牌... ${Math.min(dealPhase, totalCards)}/${totalCards}` : allRevealed ? '所有牌已翻开 · 点击解读' : `已翻开 ${revealedCount}/${totalCards} 张牌`}
+        </h1>
+        <p className="text-xs font-body mt-1" style={{ color: 'var(--text-secondary)' }} role="status" aria-live="polite">
+          {isDealing
+            ? t('dealing', { current: Math.min(dealPhase, totalCards), total: totalCards })
+            : allRevealed
+              ? t('allRevealedHint')
+              : t('revealedProgress', { current: revealedCount, total: totalCards })}
         </p>
       </div>
 
@@ -339,6 +373,7 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
                 return (
                   <motion.div
                     key={`simple-${index}`}
+                    data-reading-card-index={index}
                     className="flex flex-col items-center"
                     initial={{ opacity: 0, y: -120, scale: 0.4, rotateZ: dropRot * 2 }}
                     animate={{
@@ -347,7 +382,7 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
                       scale: isDealt ? 1 : 0.4,
                       rotateZ: isDealt ? 0 : dropRot * 2,
                     }}
-                    transition={{
+                    transition={reduceMotion ? { duration: 0 } : {
                       type: 'spring',
                       stiffness: 140,
                       damping: 12,
@@ -362,7 +397,8 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
                           isReversed={drawnCard.isReversed}
                           isRevealed={drawnCard.isRevealed}
                           size="sm"
-                          disabled={isDealing || (allRevealed && !drawnCard.isRevealed)}
+                          positionLabel={pos.label}
+                          disabled={isDealing}
                         />
                       </div>
                     </div>
@@ -371,7 +407,7 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
                       style={{ color: 'var(--text-primary)' }}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: isDealt ? 1 : 0 }}
-                      transition={{ delay: 0.3 + index * 0.12 }}
+                      transition={reduceMotion ? { duration: 0 } : { delay: 0.3 + index * 0.12 }}
                     >
                       {pos.label}
                     </motion.div>
@@ -384,14 +420,15 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
         </>
       )}
 
-      {/* Card detail - fixed bottom panel above buttons */}
+      {/* Card detail - in the mobile scroll flow; fixed above actions on desktop */}
       {selectedCard && selectedPosition && (
         <motion.div
-          className="fixed bottom-[72px] left-0 right-0 z-40 px-3"
+          ref={detailRef}
+          className="reading-detail relative z-[60] w-full flex-none px-0 mt-4 mb-24 scroll-mb-28 md:fixed md:bottom-[72px] md:left-0 md:right-0 md:px-3 md:mt-0 md:mb-0"
           initial={{ y: 120, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 120, opacity: 0 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 300, damping: 30 }}
           onClick={stopPropagation}
         >
           <div
@@ -405,17 +442,18 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
             {/* Close button */}
             <button
               onClick={() => setSelectedIndex(null)}
+              aria-label={t('close')}
               className="absolute top-1.5 right-2 text-[var(--text-dim)] hover:text-[#C8A97E] transition-colors text-lg leading-none z-10"
             >
               &times;
             </button>
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-12 h-18 rounded-lg overflow-hidden">
+              <div className="flex-shrink-0 w-12 h-[4.5rem] rounded-lg overflow-hidden bg-[#0A1628]">
                 <img
                   src={selectedCard.card.image || cardBackUrl}
                   alt={selectedCard.card.name}
-                  className="w-full h-full object-cover"
-                  style={{ transform: selectedCard.isReversed ? 'scale(1.08) rotate(180deg)' : 'scale(1.08)' }}
+                  className="w-full h-full object-contain"
+                  style={{ transform: selectedCard.isReversed ? 'rotate(180deg)' : undefined }}
                 />
               </div>
               <div className="flex-1 min-w-0 pr-5">
@@ -425,7 +463,7 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
                   </span>
                   {selectedCard.isReversed && (
                     <span className="text-[10px] px-2 py-0.5 rounded-full font-body" style={{ background: 'rgba(180,80,80,0.2)', color: '#D4A0A0' }}>
-                      逆位
+                      {t('reversed')}
                     </span>
                   )}
                 </div>
@@ -460,7 +498,7 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
       </div>
 
       {/* Bottom buttons - FIXED at screen bottom */}
-      <div className="fixed bottom-4 left-0 right-0 z-30 flex justify-center gap-4 px-4" onClick={stopPropagation}>
+      <div className="reading-actions fixed bottom-0 left-0 right-0 z-30 flex justify-center gap-4 px-4" onClick={stopPropagation}>
         <button
           onClick={onReset}
           className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-display transition-all active:scale-95"
@@ -471,12 +509,13 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
           }}
         >
           <RotateCcw className="w-4 h-4" />
-          重新开始
+          {t('restart')}
         </button>
         {!allRevealed && !isDealing && (
           <button
             onClick={() => {
               const newCards = cards.map(c => ({ ...c, isRevealed: true }));
+              void successHaptic();
               setCards(newCards);
               setRevealedCount(cards.length);
             }}
@@ -488,7 +527,7 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
             }}
           >
             <ArrowDown className="w-4 h-4" />
-            全部翻开
+            {t('revealAll')}
           </button>
         )}
         {allRevealed && (
@@ -498,7 +537,7 @@ export default function ReadingPage({ spread, drawnCards: initialCards, onComple
             style={{ background: 'var(--accent)', color: 'var(--bg-primary)' }}
           >
             <Sparkles className="w-4 h-4" />
-            查看完整解读
+            {t('fullReading')}
           </button>
         )}
       </div>

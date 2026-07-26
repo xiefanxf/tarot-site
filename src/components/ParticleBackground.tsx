@@ -29,7 +29,6 @@ export default function ParticleBackground() {
       canvas.height = window.innerHeight;
     };
     resize();
-    window.addEventListener('resize', resize);
 
     const colors = [
       'rgba(200, 169, 126, ',  // gold
@@ -60,42 +59,45 @@ export default function ParticleBackground() {
     });
 
     initParticles();
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 
     const handleMouseMove = (e: MouseEvent) => {
       mouseRef.current = { x: e.clientX, y: e.clientY };
     };
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
 
-    const animate = () => {
+    const drawFrame = (advance: boolean) => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const particles = particlesRef.current;
       const mouse = mouseRef.current;
 
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i];
-        p.life++;
+        if (advance) {
+          p.life++;
 
-        // Mouse repulsion
-        const dx = p.x - mouse.x;
-        const dy = p.y - mouse.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 120 && dist > 0) {
-          const force = (120 - dist) / 120 * 0.8;
-          p.vx += (dx / dist) * force;
-          p.vy += (dy / dist) * force;
+          // Mouse repulsion
+          const dx = p.x - mouse.x;
+          const dy = p.y - mouse.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120 && dist > 0) {
+            const force = (120 - dist) / 120 * 0.8;
+            p.vx += (dx / dist) * force;
+            p.vy += (dy / dist) * force;
+          }
+
+          // Apply velocity with damping
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vx *= 0.98;
+          p.vy *= 0.98;
+
+          // Wrap around
+          if (p.x < -10) p.x = canvas.width + 10;
+          if (p.x > canvas.width + 10) p.x = -10;
+          if (p.y < -10) p.y = canvas.height + 10;
+          if (p.y > canvas.height + 10) p.y = -10;
         }
-
-        // Apply velocity with damping
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vx *= 0.98;
-        p.vy *= 0.98;
-
-        // Wrap around
-        if (p.x < -10) p.x = canvas.width + 10;
-        if (p.x > canvas.width + 10) p.x = -10;
-        if (p.y < -10) p.y = canvas.height + 10;
-        if (p.y > canvas.height + 10) p.y = -10;
 
         // Life cycle
         const lifeRatio = p.life / p.maxLife;
@@ -110,7 +112,7 @@ export default function ParticleBackground() {
         ctx.fill();
 
         // Reset if too old
-        if (p.life >= p.maxLife) {
+        if (advance && p.life >= p.maxLife) {
           particles[i] = createParticle(colors);
         }
       }
@@ -133,15 +135,37 @@ export default function ParticleBackground() {
         }
       }
 
+    };
+
+    const animate = () => {
+      drawFrame(true);
       animRef.current = requestAnimationFrame(animate);
     };
 
-    animate();
+    const syncMotionPreference = () => {
+      cancelAnimationFrame(animRef.current);
+      if (motionQuery.matches) {
+        drawFrame(false);
+      } else {
+        animate();
+      }
+    };
+
+    const handleResize = () => {
+      resize();
+      initParticles();
+      syncMotionPreference();
+    };
+
+    window.addEventListener('resize', handleResize);
+    motionQuery.addEventListener('change', syncMotionPreference);
+    syncMotionPreference();
 
     return () => {
       cancelAnimationFrame(animRef.current);
-      window.removeEventListener('resize', resize);
+      window.removeEventListener('resize', handleResize);
       window.removeEventListener('mousemove', handleMouseMove);
+      motionQuery.removeEventListener('change', syncMotionPreference);
     };
   }, []);
 
@@ -149,6 +173,7 @@ export default function ParticleBackground() {
     <canvas
       ref={canvasRef}
       className="particle-canvas"
+      aria-hidden="true"
       style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0, pointerEvents: 'none' }}
     />
   );

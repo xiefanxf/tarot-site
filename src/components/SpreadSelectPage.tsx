@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Copyright from './Copyright';
 import CardBackImg from './CardBackImg';
-import { spreads } from '@/data/tarotCards';
+import { useI18n } from '@/i18n';
+import { getLocalizedSpreads } from '@/i18n/tarot';
 import type { SpreadType } from '@/types/tarot';
 
 interface SpreadSelectPageProps {
-  onSelectSpread: (spread: SpreadType) => void;
+  onSelectSpread: (spreadId: string) => void;
   onBack: () => void;
 }
 
@@ -60,7 +61,7 @@ function SpreadMiniVisual({ spread, isSelected }: { spread: SpreadType; isSelect
                   color: '#000000',
                 }}
               >
-                {pos.label}
+                {i + 1}
               </span>
             </div>
           </div>
@@ -103,39 +104,65 @@ function SpreadMiniVisual({ spread, isSelected }: { spread: SpreadType; isSelect
 }
 
 export default function SpreadSelectPage({ onSelectSpread, onBack }: SpreadSelectPageProps) {
+  const { language, t } = useI18n();
+  const spreads = getLocalizedSpreads(language);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const transitionTimer = useRef<number | null>(null);
+  const onSelectSpreadRef = useRef(onSelectSpread);
+
+  useEffect(() => {
+    onSelectSpreadRef.current = onSelectSpread;
+  }, [onSelectSpread]);
+
+  const cancelTransition = useCallback(() => {
+    if (transitionTimer.current !== null) {
+      window.clearTimeout(transitionTimer.current);
+      transitionTimer.current = null;
+    }
+  }, []);
+
+  useEffect(() => cancelTransition, [cancelTransition]);
 
   const handleSelect = (spread: SpreadType) => {
+    cancelTransition();
     setSelectedId(spread.id);
     setIsTransitioning(true);
-    setTimeout(() => {
-      onSelectSpread(spread);
-    }, 800);
+    const delay = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 800;
+    transitionTimer.current = window.setTimeout(() => {
+      transitionTimer.current = null;
+      onSelectSpreadRef.current(spread.id);
+    }, delay);
+  };
+
+  const handleBack = () => {
+    cancelTransition();
+    setIsTransitioning(false);
+    onBack();
   };
 
   return (
-    <div className="relative z-10 w-full h-full flex flex-col items-center px-4 md:px-8 pt-16 pb-8 overflow-y-auto">
+    <div className="relative z-10 w-full h-full flex flex-col items-center px-4 md:px-8 pt-28 md:pt-16 pb-8 overflow-y-auto">
       {/* Back button - normal flow */}
       <div className="w-full max-w-4xl mb-4">
         <button
-          onClick={onBack}
+          onClick={handleBack}
           className="flex items-center gap-1 text-[#98ACC8] hover:text-[#C8A97E] transition-colors text-sm"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 18l-6-6 6-6" />
           </svg>
-          <span className="font-body">返回洗牌</span>
+          <span className="font-body">{t('backToShuffle')}</span>
         </button>
       </div>
 
       {/* Title */}
       <div className="text-center mb-8">
-        <h2 className="font-display text-2xl md:text-3xl text-[#F0F0F0] mb-2" style={{ letterSpacing: '0.1em' }}>
-          选择你的牌阵
-        </h2>
+        <h1 tabIndex={-1} className="page-heading font-display text-2xl md:text-3xl text-[#F0F0F0] mb-2" style={{ letterSpacing: '0.1em' }}>
+          {t('chooseSpreadTitle')}
+        </h1>
         <p className="text-[#98ACC8] font-body text-sm">
-          不同的牌阵揭示不同层次的答案
+          {t('spreadSubtitle')}
         </p>
       </div>
 
@@ -148,6 +175,7 @@ export default function SpreadSelectPage({ onSelectSpread, onBack }: SpreadSelec
           return (
             <button
               key={spread.id}
+              disabled={isTransitioning}
               onClick={() => !isTransitioning && handleSelect(spread)}
               className={`
                 spread-card text-left transition-all duration-500
@@ -158,7 +186,9 @@ export default function SpreadSelectPage({ onSelectSpread, onBack }: SpreadSelec
               {/* Card count badge */}
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] font-display text-[#8BA6C4] tracking-wider">
-                  {spread.positions.length} 张牌
+                  {language === 'en' && spread.positions.length === 1
+                    ? t('cardCountOne')
+                    : t('cardCount', { count: spread.positions.length })}
                 </span>
                 {isSelected && (
                   <div className="w-2 h-2 rounded-full bg-[#C8A97E] shadow-[0_0_8px_rgba(200,169,126,0.6)]" />
@@ -204,7 +234,7 @@ export default function SpreadSelectPage({ onSelectSpread, onBack }: SpreadSelec
 
       {/* Hint */}
       <p className="mt-6 text-xs text-[#8BA6C4] font-body">
-        点击选择牌阵，开始发牌
+        {t('spreadHint')}
       </p>
 
       {/* Copyright */}
