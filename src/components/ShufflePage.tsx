@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Scissors, ArrowRight, RotateCcw, ChevronLeft } from 'lucide-react';
 import Copyright from './Copyright';
 import CardBackImg from './CardBackImg';
+import { useI18n } from '@/i18n';
 
 interface ShufflePageProps {
   onComplete: () => void;
@@ -16,6 +17,7 @@ interface DeckCard {
 }
 
 export default function ShufflePage({ onComplete, onBack }: ShufflePageProps) {
+  const { t } = useI18n();
   const [deckCards, setDeckCards] = useState<DeckCard[]>(() =>
     Array.from({ length: 7 }, (_, i) => ({
       id: i,
@@ -25,20 +27,37 @@ export default function ShufflePage({ onComplete, onBack }: ShufflePageProps) {
     }))
   );
   const [phase, setPhase] = useState<'idle' | 'shuffling' | 'fanned' | 'transitioning'>('idle');
-  const [message, setMessage] = useState('集中精神，默念你的问题');
+  const [messageKey, setMessageKey] = useState('focusQuestion');
+  const timersRef = useRef<Set<number>>(new Set());
+  const reduceMotionRef = useRef(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const fanStepRef = useRef(window.innerWidth < 360 ? 29 : 35);
+
+  const schedule = useCallback((callback: () => void, delay: number) => {
+    const timer = window.setTimeout(() => {
+      timersRef.current.delete(timer);
+      callback();
+    }, reduceMotionRef.current ? 0 : delay);
+    timersRef.current.add(timer);
+    return timer;
+  }, []);
+
+  const clearTimers = useCallback(() => {
+    timersRef.current.forEach(timer => window.clearTimeout(timer));
+    timersRef.current.clear();
+  }, []);
 
   const shuffleDeck = useCallback(() => {
     if (phase !== 'idle' && phase !== 'fanned') return;
     setPhase('shuffling');
-    setMessage('正在洗牌...');
+    setMessageKey('shuffling');
 
     // Phase 1: gather
-    setDeckCards(prev => prev.map(() => ({
-      id: 0, offsetX: 0, offsetY: 0, rotation: 0,
+    setDeckCards(prev => prev.map(card => ({
+      ...card, offsetX: 0, offsetY: 0, rotation: 0,
     })));
 
     // Phase 2: vigorous shuffle (multiple beats)
-    setTimeout(() => {
+    schedule(() => {
       setDeckCards(prev => prev.map((card) => ({
         ...card,
         offsetX: (Math.random() - 0.5) * 40,
@@ -47,7 +66,7 @@ export default function ShufflePage({ onComplete, onBack }: ShufflePageProps) {
       })));
     }, 500);
 
-    setTimeout(() => {
+    schedule(() => {
       setDeckCards(prev => prev.map((card) => ({
         ...card,
         offsetX: (Math.random() - 0.5) * 35,
@@ -57,10 +76,10 @@ export default function ShufflePage({ onComplete, onBack }: ShufflePageProps) {
     }, 1200);
 
     // Phase 3: fan out
-    setTimeout(() => {
+    schedule(() => {
       setDeckCards(prev => prev.map((card, i) => {
         const centerIndex = 3;
-        const spread = (i - centerIndex) * 35;
+        const spread = (i - centerIndex) * fanStepRef.current;
         return {
           ...card,
           offsetX: spread,
@@ -69,14 +88,14 @@ export default function ShufflePage({ onComplete, onBack }: ShufflePageProps) {
         };
       }));
       setPhase('fanned');
-      setMessage('牌已洗好');
+      setMessageKey('cardsReady');
     }, 2000);
-  }, [phase]);
+  }, [phase, schedule]);
 
   const cutDeck = useCallback(() => {
     if (phase !== 'idle' && phase !== 'fanned') return;
     setPhase('shuffling');
-    setMessage('正在切牌...');
+    setMessageKey('cutting');
 
     // Phase 1: split into two piles
     setDeckCards(prev => prev.map((card, i) => ({
@@ -87,8 +106,8 @@ export default function ShufflePage({ onComplete, onBack }: ShufflePageProps) {
     })));
 
     // Phase 2: pause — let user see the two piles
-    setTimeout(() => {
-      setMessage('交换牌堆...');
+    schedule(() => {
+      setMessageKey('swapping');
       setDeckCards(prev => prev.map((card, i) => ({
         ...card,
         offsetX: i < 3 ? 35 : -35,
@@ -98,10 +117,10 @@ export default function ShufflePage({ onComplete, onBack }: ShufflePageProps) {
     }, 1000);
 
     // Phase 3: fan out
-    setTimeout(() => {
+    schedule(() => {
       setDeckCards(prev => prev.map((card, i) => {
         const centerIndex = 3;
-        const spread = (i - centerIndex) * 35;
+        const spread = (i - centerIndex) * fanStepRef.current;
         return {
           ...card,
           offsetX: spread,
@@ -110,52 +129,58 @@ export default function ShufflePage({ onComplete, onBack }: ShufflePageProps) {
         };
       }));
       setPhase('fanned');
-      setMessage('切牌完成');
+      setMessageKey('cutComplete');
     }, 2200);
-  }, [phase]);
+  }, [phase, schedule]);
 
   // Auto-fan on first load after a longer delay for contemplation
   useEffect(() => {
-    const timer = setTimeout(() => {
+    schedule(() => {
       shuffleDeck();
     }, 2500);
-    return () => clearTimeout(timer);
+    return clearTimers;
     // Run once on entry so the deck auto-fans after the initial pause.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleProceed = () => {
+    clearTimers();
     setPhase('transitioning');
-    setMessage('');
+    setMessageKey('');
     // Collapse cards then proceed
-    setDeckCards(prev => prev.map(() => ({ id: 0, offsetX: 0, offsetY: 0, rotation: 0 })));
-    setTimeout(onComplete, 500);
+    setDeckCards(prev => prev.map(card => ({ ...card, offsetX: 0, offsetY: 0, rotation: 0 })));
+    schedule(onComplete, 500);
   };
 
-  const title = phase === 'transitioning' ? '选择你的牌阵' : '洗牌与切牌';
-  const subtitle = phase === 'transitioning' ? '选择一种牌阵来解读你的问题' : message;
+  const handleBack = () => {
+    clearTimers();
+    onBack();
+  };
+
+  const title = phase === 'transitioning' ? t('chooseSpreadTitle') : t('shuffleTitle');
+  const subtitle = phase === 'transitioning' ? t('chooseSpreadSubtitle') : (messageKey ? t(messageKey) : '');
 
   return (
-    <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-4 overflow-y-auto">
+    <div className="shuffle-page relative z-10 w-full h-full flex flex-col items-center px-4 overflow-y-auto">
       {/* Back button */}
       <button
-        onClick={onBack}
-        className="absolute top-4 left-4 flex items-center gap-1 text-sm text-[#98ACC8] hover:text-[#C8A97E] transition-colors"
+        onClick={handleBack}
+        className="self-start flex items-center gap-1 text-sm text-[#98ACC8] hover:text-[#C8A97E] transition-colors"
       >
         <ChevronLeft className="w-4 h-4" />
-        <span>返回</span>
+        <span>{t('back')}</span>
       </button>
 
       {/* Title */}
-      <div className="text-center mb-8">
-        <h2 className="font-display text-2xl md:text-3xl text-[#F0F0F0] mb-2" style={{ letterSpacing: '0.1em' }}>
+      <div className="text-center mt-16 mb-4 md:mb-8">
+        <h1 tabIndex={-1} className="page-heading font-display text-2xl md:text-3xl text-[#F0F0F0] mb-2" style={{ letterSpacing: '0.1em' }}>
           {title}
-        </h2>
-        <p className="text-[#98ACC8] font-body text-sm">{subtitle}</p>
+        </h1>
+        <p className="text-[#98ACC8] font-body text-sm" role="status" aria-live="polite">{subtitle}</p>
       </div>
 
       {/* Card deck area */}
-      <div className="relative w-80 h-64 flex items-center justify-center mb-8">
+      <div className="shuffle-deck relative w-full max-w-80 h-64 flex flex-none items-center justify-center mb-4 md:mb-8">
         {deckCards.map((card, index) => (
           <div
             key={card.id + '-' + index}
@@ -197,15 +222,15 @@ export default function ShufflePage({ onComplete, onBack }: ShufflePageProps) {
           <>
             <button onClick={shuffleDeck} className="btn-mystical flex items-center gap-2">
               <RotateCcw className="w-4 h-4" />
-              <span>再洗一次</span>
+              <span>{t('shuffleAgain')}</span>
             </button>
             <button onClick={cutDeck} className="btn-mystical flex items-center gap-2">
               <Scissors className="w-4 h-4" />
-              <span>切牌</span>
+              <span>{t('cutDeck')}</span>
             </button>
             <button onClick={handleProceed} className="btn-mystical pulse-glow flex items-center gap-2">
               <span className="flex items-center gap-2">
-                选择牌阵
+                {t('chooseSpread')}
                 <ArrowRight className="w-4 h-4" />
               </span>
             </button>
@@ -214,7 +239,7 @@ export default function ShufflePage({ onComplete, onBack }: ShufflePageProps) {
       </div>
 
       {/* Copyright */}
-      <div className="absolute bottom-2 left-0 right-0">
+      <div className="mt-4">
         <Copyright />
       </div>
     </div>

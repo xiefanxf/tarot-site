@@ -17,7 +17,7 @@ export const spreads: SpreadType[] = [
     nameEn: 'The Single Card',
     description: '抽取一张牌，获取当下的核心指引与启示',
     positions: [
-      { index: 0, label: '指引', x: 50, y: 45, description: '此刻宇宙要传递给妳的核心讯息' },
+      { index: 0, label: '指引', x: 50, y: 45, description: '此刻宇宙要传递给你的核心讯息' },
     ],
   },
   {
@@ -27,7 +27,7 @@ export const spreads: SpreadType[] = [
     description: '三张牌揭示过去、现在与未来的能量流动',
     positions: [
       { index: 0, label: '过去', x: 20, y: 45, description: '影响当前情况的根源与过往经历' },
-      { index: 1, label: '现在', x: 50, y: 45, description: '妳当下的处境与核心状态' },
+      { index: 1, label: '现在', x: 50, y: 45, description: '你当下的处境与核心状态' },
       { index: 2, label: '未来', x: 80, y: 45, description: '按照当前轨迹发展的近期未来' },
     ],
   },
@@ -43,7 +43,7 @@ export const spreads: SpreadType[] = [
       { index: 3, label: '过去', x: 8, y: 52, description: '刚刚过去的影响因素' },
       { index: 4, label: '目标', x: 56, y: 52, description: '最好的结果与冠冕' },
       { index: 5, label: '未来', x: 32, y: 16, description: '即将到来的能量' },
-      { index: 6, label: '自我', x: 82, y: 16, description: '妳在当前情境中的角色' },
+      { index: 6, label: '自我', x: 82, y: 16, description: '你在当前情境中的角色' },
       { index: 7, label: '环境', x: 82, y: 39, description: '外部环境与他人影响' },
       { index: 8, label: '希望', x: 82, y: 62, description: '内心的希望或恐惧' },
       { index: 9, label: '结果', x: 82, y: 85, description: '问题的最终结果' },
@@ -246,7 +246,7 @@ export const tarotCards: TarotCard[] = [
     id: 'm21', name: '世界', nameEn: 'The World', arcana: 'major', suit: 'major', number: 21, romanNumeral: 'XXI',
     image: cardImage('21_world.jpg'),
     uprightKeywords: ['完成', '成就', '整合', '圆满', '旅行'],
-    uprightDescription: '一个完整的循环已经达成，成就的桂冠属于你。世界牌代表着圆满、整合和成功的完成。你经历了一段漫长的旅程，现在收获了果实。庆祝你的成就，同时准备迎接新的循环。世界是妳的舞台。',
+    uprightDescription: '一个完整的循环已经达成，成就的桂冠属于你。世界牌代表着圆满、整合和成功的完成。你经历了一段漫长的旅程，现在收获了果实。庆祝你的成就，同时准备迎接新的循环。世界是你的舞台。',
     reversedKeywords: ['未完成的循环', '延迟', '缺乏封闭', '空虚', '不完美'],
     reversedDescription: '可能还有一些未完成的事情，或者你感到某个循环没有妥善结束。不要急于开始新的事物，先完成手头的工作。寻找缺失的部分，给过去一个圆满的 了结。',
     element: 'Earth', planet: 'Saturn',
@@ -365,8 +365,8 @@ export function getCardById(id: string): TarotCard | undefined {
   return tarotCards.find(c => c.id === id);
 }
 
-export function shuffleCards(): TarotCard[] {
-  const cards = [...tarotCards];
+export function shuffleCards(source: TarotCard[] = tarotCards): TarotCard[] {
+  const cards = [...source];
   for (let i = cards.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [cards[i], cards[j]] = [cards[j], cards[i]];
@@ -374,8 +374,8 @@ export function shuffleCards(): TarotCard[] {
   return cards;
 }
 
-export function drawCards(count: number): DrawnCard[] {
-  const shuffled = shuffleCards();
+export function drawCards(count: number, source: TarotCard[] = tarotCards): DrawnCard[] {
+  const shuffled = shuffleCards(source);
   return shuffled.slice(0, count).map((card, i) => ({
     card,
     isReversed: Math.random() < 0.3,

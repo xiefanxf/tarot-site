@@ -2,18 +2,26 @@
 <html lang="en" style="background-color: #0A1628;">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>日月塔罗 Solaris Luna</title>
     <link rel="preload" as="image" href="card_back.jpg?v=1" />
     <link rel="preload" as="image" href="card_back_light.jpg?v=1" />
     <link rel="preload" as="image" href="splash_day.jpg" />
     <link rel="preload" as="image" href="splash_night.jpg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- Sync theme init: auto-detect system theme -->
     <script>
       (function() {
-        var saved = localStorage.getItem('tarot-theme');
+        var savedLanguage = null;
+        try { savedLanguage = localStorage.getItem('tarot-language'); } catch (_) {}
+        var systemLanguage = navigator.language.toLowerCase();
+        var language = savedLanguage === 'zh' || savedLanguage === 'en' || savedLanguage === 'ja'
+          ? savedLanguage
+          : systemLanguage.indexOf('ja') === 0 ? 'ja' : systemLanguage.indexOf('zh') === 0 ? 'zh' : 'en';
+        document.documentElement.lang = language === 'zh' ? 'zh-CN' : language === 'ja' ? 'ja-JP' : 'en-US';
+        document.documentElement.setAttribute('data-language', language);
+        document.title = language === 'zh' ? '日月塔罗' : language === 'ja' ? '日月タロット' : 'Solaris Luna Tarot';
+        var saved = null;
+        try { saved = localStorage.getItem('tarot-theme'); } catch (_) {}
         var isLight;
         if (saved === 'light' || saved === 'dark') {
           isLight = saved === 'light';
