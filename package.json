@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "xhs:data": "node scripts/export-xhs-tarot-data.mjs",
+    "xhs:validate": "node scripts/validate-xhs-miniapp.mjs"
   },
   "dependencies": {
     "framer-motion": "^12.40.0",

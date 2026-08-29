@@ -1,0 +1,212 @@
+<view class="app-shell {{themeClass}}">
+  <view class="ambient ambient-one"></view>
+  <view class="ambient ambient-two"></view>
+
+  <button class="theme-toggle" bindtap="toggleTheme">
+    <text>{{themeIcon}}</text>
+  </button>
+
+  <view xhs:if="{{showIntro}}" class="screen intro-screen">
+    <view class="hero-mark">
+      <image class="hero-card" src="/assets/card_back.jpg" mode="aspectFill"></image>
+      <view class="hero-orbit"></view>
+    </view>
+    <text class="eyebrow">SOLARIS LUNA</text>
+    <text class="hero-title">日 月 塔 罗</text>
+    <text class="hero-subtitle">探寻潜意识的回响</text>
+    <view class="hero-copy">
+      <text>集中精神，默念你的问题</text>
+      <text>让 78 张塔罗牌为你提供一面观察内心的镜子</text>
+    </view>
+    <button class="primary-button" bindtap="startReadingFlow">开始占卜</button>
+    <view class="feature-row">
+      <text>78 张牌</text><text>·</text><text>经典牌阵</text><text>·</text><text>正逆位解读</text>
+    </view>
+    <text class="disclaimer">内容仅供自我探索与娱乐，不替代医疗、法律、财务或心理专业建议</text>
+  </view>
+
+  <view xhs:if="{{showQuestion}}" class="screen content-screen">
+    <button class="back-button" bindtap="backToIntro">‹ 返回</button>
+    <view class="section-heading">
+      <text class="eyebrow">DIVINATION GUIDE</text>
+      <text class="section-title">占卜指引</text>
+      <text class="section-subtitle">塔罗无法替你做决定，但能帮助你看见真实感受</text>
+    </view>
+
+    <view class="form-block">
+      <text class="form-label">选择占卜领域</text>
+      <view class="category-grid">
+        <button
+          xhs:for="{{categories}}"
+          xhs:key="id"
+          class="{{item.buttonClass}}"
+          data-id="{{item.id}}"
+          bindtap="chooseCategory"
+        >
+          <text class="category-icon">{{item.iconText}}</text>
+          <text>{{item.label}}</text>
+        </button>
+      </view>
+    </view>
+
+    <view class="form-block">
+      <text class="form-label">默念你的问题（可选）</text>
+      <textarea
+        class="question-input"
+        value="{{question}}"
+        maxlength="80"
+        auto-height="true"
+        placeholder="例如：我应该如何面对眼前的变化？"
+        bindinput="onQuestionInput"
+      ></textarea>
+      <text class="input-counter">{{question.length}} / 80</text>
+    </view>
+
+    <button class="primary-button full-button" disabled="{{startShuffleDisabled}}" bindtap="startShuffle">开始洗牌</button>
+    <text class="quote">“牌面如镜，映照的是你的心”</text>
+  </view>
+
+  <view xhs:if="{{showShuffle}}" class="screen shuffle-screen">
+    <button class="back-button fixed-back" bindtap="backToQuestion">‹ 返回</button>
+    <view class="section-heading compact-heading">
+      <text class="section-title">洗牌与切牌</text>
+      <text class="section-subtitle">{{shuffleMessage}}</text>
+    </view>
+
+    <view class="deck-stage {{shufflePhase}}">
+      <view xhs:for="{{deckCards}}" xhs:key="index" class="deck-card deck-card-{{index}}">
+        <image src="/assets/card_back.jpg" mode="aspectFill"></image>
+      </view>
+      <view class="deck-glow"></view>
+    </view>
+
+    <view xhs:if="{{shuffleReady}}" class="action-row">
+      <button class="secondary-button" bindtap="reshuffle">↻ 再洗一次</button>
+      <button class="secondary-button" bindtap="cutDeck">✂ 切牌</button>
+      <button class="primary-button small-primary" bindtap="showSpreads">选择牌阵 →</button>
+    </view>
+  </view>
+
+  <view xhs:if="{{showSpreads}}" class="screen content-screen spread-screen">
+    <button class="back-button" bindtap="backToShuffle">‹ 返回洗牌</button>
+    <view class="section-heading">
+      <text class="section-title">选择你的牌阵</text>
+      <text class="section-subtitle">不同牌阵，照见问题的不同层次</text>
+    </view>
+
+    <view class="spread-list">
+      <button
+        xhs:for="{{spreads}}"
+        xhs:key="id"
+        class="spread-card"
+        data-id="{{item.id}}"
+        bindtap="selectSpread"
+      >
+        <view class="spread-card-top">
+          <view>
+            <text class="spread-count">{{item.countLabel}}</text>
+            <text class="spread-name">{{item.name}}</text>
+            <text class="spread-name-en">{{item.nameEn}}</text>
+          </view>
+          <text class="spread-arrow">→</text>
+        </view>
+        <view class="spread-preview">
+          <view xhs:for="{{item.previewLabels}}" xhs:for-item="position" xhs:key="index" class="preview-card">
+            <image src="/assets/card_back.jpg" mode="aspectFill"></image>
+            <text>{{position.label}}</text>
+          </view>
+          <view xhs:if="{{item.hasExtraPositions}}" class="preview-more">+{{item.extraPositionCount}}</view>
+        </view>
+        <text class="spread-description">{{item.description}}</text>
+      </button>
+    </view>
+  </view>
+
+  <view xhs:if="{{showReading}}" class="screen content-screen reading-screen">
+    <button class="back-button" bindtap="backToSpreads">‹ 返回牌阵</button>
+    <view class="section-heading compact-heading">
+      <text class="section-title">{{selectedSpread.name}}</text>
+      <text class="section-subtitle">{{readingStatus}}</text>
+    </view>
+
+    <view class="{{readingGridClass}}">
+      <view
+        xhs:for="{{readingCards}}"
+        xhs:key="id"
+        class="reading-card-wrap"
+        data-index="{{index}}"
+        bindtap="revealOne"
+      >
+        <view class="reading-card">
+          <image class="{{item.imageClass}}" src="{{item.displayImage}}" mode="aspectFill"></image>
+        </view>
+        <text class="position-label">{{item.positionLabel}}</text>
+        <text xhs:if="{{item.isRevealed}}" class="card-name">{{item.displayName}} · {{item.orientationLabel}}</text>
+      </view>
+    </view>
+
+    <view class="sticky-actions">
+      <button class="secondary-button" bindtap="restart">重新开始</button>
+      <button xhs:if="{{!allRevealed}}" class="primary-button small-primary" bindtap="revealAll">全部翻开</button>
+      <button xhs:if="{{allRevealed}}" class="primary-button small-primary" bindtap="showFullReading">查看完整解读</button>
+    </view>
+  </view>
+
+  <view xhs:if="{{showReveal}}" class="screen content-screen reveal-screen">
+    <view class="section-heading">
+      <text class="eyebrow">YOUR READING</text>
+      <text class="section-title">完整解读</text>
+      <text class="section-subtitle">{{selectedCategoryLabel}} · {{selectedSpread.name}}</text>
+      <text xhs:if="{{question}}" class="question-quote">“{{question}}”</text>
+    </view>
+
+    <view class="stats-row">
+      <view><text class="stat-number">{{majorCount}}</text><text>大阿卡纳</text></view>
+      <view><text class="stat-number">{{minorCount}}</text><text>小阿卡纳</text></view>
+      <view><text class="stat-number">{{reversedCount}}</text><text>逆位牌</text></view>
+    </view>
+
+    <view class="reading-panel summary-panel">
+      <text class="panel-kicker">整体洞察</text>
+      <text class="panel-copy">{{summary}}</text>
+    </view>
+
+    <view class="detail-list">
+      <view xhs:for="{{readingCards}}" xhs:key="id" class="reading-panel card-detail">
+        <image class="{{item.detailImageClass}}" src="{{item.card.image}}" mode="aspectFill"></image>
+        <view class="detail-content">
+          <view class="detail-tags">
+            <text class="position-chip">{{item.positionLabel}}</text>
+            <text class="orientation-chip">{{item.orientationLabel}}</text>
+          </view>
+          <text class="detail-title">{{item.card.name}}</text>
+          <text class="detail-title-en">{{item.card.nameEn}}</text>
+          <view class="keyword-row">
+            <text xhs:for="{{item.keywords}}" xhs:for-item="keyword" xhs:key="index" class="keyword-chip">{{keyword}}</text>
+          </view>
+          <text class="detail-description">{{item.description}}</text>
+          <text class="position-description">{{item.positionDescription}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="reading-panel guidance-panel">
+      <text class="panel-kicker">指引与建议</text>
+      <view xhs:for="{{guidance}}" xhs:key="index" class="guidance-item">
+        <text class="guidance-index">{{item.index}}</text>
+        <text class="guidance-copy">{{item.text}}</text>
+      </view>
+    </view>
+
+    <view class="final-actions">
+      <button class="secondary-button" bindtap="saveReading">保存到本机</button>
+      <button class="secondary-button" open-type="share" data-share-type="normal">分享给朋友</button>
+      <button class="primary-button small-primary" bindtap="restart">重新占卜</button>
+    </view>
+    <text class="disclaimer result-disclaimer">请把牌面当作自我观察的提示，而不是对未来的确定承诺</text>
+  </view>
+
+  <view class="footer">
+    <text>© 2026 Laterne · Solaris Luna</text>
+  </view>
+</view>

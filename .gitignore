@@ -29,5 +29,9 @@ node_modules/.tmp/
 node_modules/.vite-temp/
 node_modules/.vite/
 
+# Xiaohongshu Developer Tools local project settings
+xhs-miniapp/project.config.json
+xhs-miniapp/project.private.config.json
+
 # OS files
 .DS_Store

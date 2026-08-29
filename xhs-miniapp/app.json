@@ -1,0 +1,12 @@
+{
+  "pages": [
+    "pages/index/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "日月塔罗",
+    "navigationBarBackgroundColor": "#f7f2e9",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f7f2e9",
+    "backgroundTextStyle": "light"
+  }
+}
